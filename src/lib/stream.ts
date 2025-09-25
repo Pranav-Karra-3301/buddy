@@ -1,7 +1,5 @@
 import { Stream } from 'openai/streaming';
 import { ChatCompletionChunk } from 'openai/resources';
-import { AssistantStream } from 'openai/lib/AssistantStream';
-import { ResponsesStream } from 'openai/lib/ResponsesStream';
 
 // Convert chat completions stream to SSE format
 export function OpenAIToSSE(stream: Stream<ChatCompletionChunk>): Response {
@@ -48,15 +46,17 @@ export function OpenAIToSSE(stream: Stream<ChatCompletionChunk>): Response {
 }
 
 // Convert Assistants API stream to SSE format
-export function AssistantStreamToSSE(stream: AssistantStream): Response {
+export function AssistantStreamToSSE(stream: AsyncIterable<unknown>): Response {
   const readable = new ReadableStream({
     async start(controller) {
       try {
         for await (const event of stream) {
           // Handle different types of assistant stream events
-          if (event.event === 'thread.message.delta') {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          if ((event as any).event === 'thread.message.delta') {
             // Extract text content from message delta
-            const content = event.data?.delta?.content;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const content = (event as any).data?.delta?.content;
             if (content && content.length > 0) {
               for (const contentPart of content) {
                 if (contentPart.type === 'text' && contentPart.text?.value) {
@@ -70,13 +70,15 @@ export function AssistantStreamToSSE(stream: AssistantStream): Response {
                 }
               }
             }
-          } else if (event.event === 'thread.run.completed') {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          } else if ((event as any).event === 'thread.run.completed') {
             // Run completed successfully
             const doneMessage = 'data: [DONE]\n\n';
             controller.enqueue(new TextEncoder().encode(doneMessage));
             controller.close();
             return;
-          } else if (event.event === 'thread.run.failed' || event.event === 'thread.run.cancelled') {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          } else if ((event as any).event === 'thread.run.failed' || (event as any).event === 'thread.run.cancelled') {
             // Handle error cases
             console.error('Assistant run failed or cancelled:', event);
             controller.error(new Error('Assistant run failed'));
@@ -108,12 +110,14 @@ export function AssistantStreamToSSE(stream: AssistantStream): Response {
 }
 
 // Convert Responses API stream to SSE format expected by the client
-export function ResponsesStreamToSSE(stream: ResponsesStream): Response {
+export function ResponsesStreamToSSE(stream: AsyncIterable<unknown>): Response {
   const readable = new ReadableStream({
     async start(controller) {
       try {
         for await (const event of stream) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           if ((event as any).type === 'response.output_text.delta') {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const delta = (event as any).delta as string | undefined;
             if (delta) {
               const sseData = JSON.stringify({
@@ -123,11 +127,13 @@ export function ResponsesStreamToSSE(stream: ResponsesStream): Response {
               const sseMessage = `data: ${sseData}\n\n`;
               controller.enqueue(new TextEncoder().encode(sseMessage));
             }
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           } else if ((event as any).type === 'response.completed') {
             const doneMessage = 'data: [DONE]\n\n';
             controller.enqueue(new TextEncoder().encode(doneMessage));
             controller.close();
             return;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           } else if ((event as any).type === 'response.error') {
             console.error('Responses stream error event:', event);
             controller.error(new Error('Response stream error'));

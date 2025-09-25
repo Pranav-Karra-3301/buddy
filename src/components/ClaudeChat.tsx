@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import ThemeToggle from './ThemeToggle';
@@ -61,12 +61,12 @@ export default function ClaudeChat() {
     setCurrentPrompts(getRandomPrompts());
   }, []);
 
-  const scrollToBottom = (force = false) => {
+  const scrollToBottom = useCallback((force = false) => {
     if (scrollRef.current && (shouldAutoScroll || force)) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
       setShowJumpToLatest(false);
     }
-  };
+  }, [shouldAutoScroll]);
 
   const handleScroll = () => {
     if (!scrollRef.current) return;
@@ -81,7 +81,7 @@ export default function ClaudeChat() {
     if (streaming || messages.length > 0) {
       scrollToBottom();
     }
-  }, [messages, streaming, shouldAutoScroll]);
+  }, [messages, streaming, shouldAutoScroll, scrollToBottom]);
 
   const startNewChat = () => {
     setMessages([]);
@@ -170,32 +170,8 @@ export default function ClaudeChat() {
     }
   };
 
-  const onSend = async () => {
-    const text = value.trim();
-    await onSendWithText(text);
-  };
 
-  const autoResize = (textarea: HTMLTextAreaElement) => {
-    textarea.style.height = 'auto';
-    textarea.style.height = Math.min(textarea.scrollHeight, window.innerHeight * 0.4) + 'px';
-  };
 
-  const onInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setValue(e.target.value);
-    autoResize(e.target);
-  };
-
-  const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      onSend();
-      // Reset textarea height after send
-      setTimeout(() => {
-        const textarea = e.target as HTMLTextAreaElement;
-        textarea.style.height = 'auto';
-      }, 0);
-    }
-  };
 
   const hasMessages = messages.length > 0;
 

@@ -101,17 +101,18 @@ export async function POST(req: NextRequest) {
     const systemInstruction = buildInstructions();
     const useVector = !!(useRag && vectorStoreId);
 
-    const tools: any[] = [];
+    const tools: Array<{ type: string; vector_store_ids?: string[] }> = [];
     if (useVector && vectorStoreId) tools.push({ type: "file_search", vector_store_ids: [vectorStoreId] });
     // Allow web search; model decides if/when to use it per instructions
     tools.push({ type: "web_search" });
 
     const input = [
-      { role: "system", content: systemInstruction },
-      ...messages.filter(m => m.role !== "system").map(m => ({ role: m.role, content: m.content }))
+      { role: "system" as const, content: systemInstruction },
+      ...messages.filter(m => m.role !== "system").map(m => ({ role: m.role as "user" | "assistant", content: m.content }))
     ];
 
-    const stream = await (client as any).responses.stream({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const stream = (client as any).responses.stream({
       model: "gpt-5-nano",
       input,
       tools,
