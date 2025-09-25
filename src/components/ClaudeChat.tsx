@@ -6,6 +6,7 @@ import remarkGfm from 'remark-gfm';
 import ThemeToggle from './ThemeToggle';
 import ClaudeComposer from './ClaudeComposer';
 import Image from 'next/image';
+import Skeleton from './Skeleton';
 
 type Message = { role: 'user' | 'assistant'; content: string };
 
@@ -273,7 +274,7 @@ export default function ClaudeChat() {
           <div className="messages-area" ref={scrollRef} onScroll={handleScroll}>
             <div className="messages-content">
               {messages.map((message, index) => (
-                <div key={index} className={`message ${message.role}`}>
+                <div key={index} className={`message ${message.role} has-toolbar`}>
                   {message.role === 'user' ? (
                     <div className="user-bubble">
                       {message.content}
@@ -312,15 +313,29 @@ export default function ClaudeChat() {
                         </ReactMarkdown>
                       ) : (
                         streaming && index === messages.length - 1 ? (
-                          <div className="typing-indicator">
-                            <span></span>
-                            <span></span>
-                            <span></span>
-                          </div>
+                          <>
+                            <div className="typing-indicator">
+                              <span></span>
+                              <span></span>
+                              <span></span>
+                            </div>
+                            <div style={{ marginTop: 8 }}>
+                              <Skeleton lines={3} />
+                            </div>
+                          </>
                         ) : null
                       )}
                     </div>
                   )}
+                  <div className="toolbar">
+                    <button
+                      className="header-button"
+                      onClick={async () => { try { await navigator.clipboard.writeText(message.content); } catch {} }}
+                      aria-label="Copy message"
+                    >
+                      Copy
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

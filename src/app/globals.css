@@ -150,6 +150,19 @@ body {
   margin-top: 6px;
 }
 .has-toolbar:hover .toolbar { display: inline-flex; }
+/* inline copy action used in ClaudeChat */
+.message.has-toolbar .toolbar {
+  opacity: 0.0;
+  transition: opacity 0.18s ease;
+}
+.message.has-toolbar:hover .toolbar { opacity: 1; }
+.message .toolbar .header-button {
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  padding: 6px 10px;
+}
 
 .scroll-area { overflow-y: auto; }
 .jump-to-latest {

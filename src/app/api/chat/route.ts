@@ -140,7 +140,7 @@ export async function POST(req: NextRequest) {
 
     const tools: any[] = [];
     if (useVector && vectorStoreId) tools.push({ type: "file_search" });
-    // Always allow web search; model decides when to use it per instructions
+    // Allow web search; model decides if/when to use it per instructions
     tools.push({ type: "web_search" });
 
     const input = [
@@ -154,7 +154,7 @@ export async function POST(req: NextRequest) {
       tools,
       stream: true,
       ...(useVector && vectorStoreId
-        ? { tool_choice: "auto", tool_resources: { file_search: { vector_store_ids: [vectorStoreId] } } }
+        ? { attachments: [{ vector_store_id: vectorStoreId, tools: [{ type: "file_search" }] }] }
         : {}),
     });
 
