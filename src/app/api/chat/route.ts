@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { OpenAIClient } from "@/lib/openai";
 import { AssistantStreamToSSE } from "@/lib/stream";
+import OpenAI from "openai";
 
 export const runtime = "edge";
 
@@ -9,7 +10,7 @@ type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 let assistantId: string | null = null;
 
 // Create or get the assistant with file_search capability
-async function getAssistant(client: any, vectorStoreId: string) {
+async function getAssistant(client: OpenAI, vectorStoreId: string) {
   if (assistantId) {
     try {
       // Try to retrieve existing assistant
@@ -100,7 +101,7 @@ Greet briefly as: "Hi, I'm Buddy." and continue.`,
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { messages, useRag = true }: { messages: ChatMessage[]; useRag?: boolean } = body || {};
+    const { messages }: { messages: ChatMessage[]; useRag?: boolean } = body || {};
 
     if (!Array.isArray(messages) || messages.length === 0) {
       return new Response("Invalid payload", { status: 400 });

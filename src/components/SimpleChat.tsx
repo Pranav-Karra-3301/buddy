@@ -76,7 +76,7 @@ export default function SimpleChat() {
                 return copy;
               });
             }
-          } catch (e) {
+          } catch {
             // ignore malformed events
           }
         }

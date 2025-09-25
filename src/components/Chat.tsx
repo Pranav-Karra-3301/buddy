@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import ThreadSidebar from './ThreadSidebar';
 import MessageList from './MessageList';
 import Composer from './Composer';
@@ -9,7 +9,6 @@ import TypingDots from './TypingDots';
 import { addMessageToThread, createThread, loadThreads, saveThreads } from '@/lib/store';
 import { Message, Thread } from '@/lib/types';
 
-const STORAGE_KEY = 'ltc:threads:v1';
 const DEFAULT_PLACEHOLDERS = ['Ask anything…', 'Follow up…'];
 
 export default function Chat() {
@@ -132,7 +131,7 @@ export default function Chat() {
         const chunk = decoder.decode(value, { stream: true });
         processChunk(chunk);
       }
-    } catch (e) {
+    } catch {
       // On error, write a fallback message
       setThreads((prev) => {
         const cur = prev.find((t) => t.id === activeThread.id);

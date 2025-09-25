@@ -1,7 +1,9 @@
 import { Stream } from 'openai/streaming';
+import { ChatCompletionChunk } from 'openai/resources';
+import { AssistantStream } from 'openai/lib/AssistantStream';
 
 // Convert chat completions stream to SSE format
-export function OpenAIToSSE(stream: Stream<any>): Response {
+export function OpenAIToSSE(stream: Stream<ChatCompletionChunk>): Response {
   const readable = new ReadableStream({
     async start(controller) {
       try {
@@ -45,7 +47,7 @@ export function OpenAIToSSE(stream: Stream<any>): Response {
 }
 
 // Convert Assistants API stream to SSE format
-export function AssistantStreamToSSE(stream: Stream<any>): Response {
+export function AssistantStreamToSSE(stream: AssistantStream): Response {
   const readable = new ReadableStream({
     async start(controller) {
       try {

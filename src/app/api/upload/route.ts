@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
     const batch = await client.vectorStores.fileBatches.uploadAndPoll(vs, { files });
 
     return Response.json({ status: batch.status, fileCounts: batch.file_counts, vectorStoreId: vs });
-  } catch (err) {
+  } catch {
     return new Response('Upload failed', { status: 500 });
   }
 }

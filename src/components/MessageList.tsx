@@ -24,7 +24,7 @@ export default function MessageList({
   useEffect(() => {
     if (!ref.current || !autoScroll) return;
     ref.current.scrollTop = ref.current.scrollHeight;
-  }, [thread, streaming]);
+  }, [thread, streaming, autoScroll]);
 
   const onScroll = () => {
     const el = ref.current;

@@ -82,7 +82,7 @@ export default function ClaudeChat() {
         const chunk = decoder.decode(value, { stream: true });
         processChunk(chunk);
       }
-    } catch (error) {
+    } catch {
       setMessages((prev) => {
         const copy = [...prev];
         const last = copy[copy.length - 1];
@@ -142,7 +142,7 @@ export default function ClaudeChat() {
         <div className="welcome-container">
           <div className="welcome-content">
             <div className="welcome-header">
-              <h1>Hi, I'm Buddy. <span className="beta-tag">Alpha Testing</span></h1>
+              <h1>Hi, I&apos;m Buddy. <span className="beta-tag">Alpha Testing</span></h1>
               <p>How can I help you today?</p>
               <div className="beta-disclaimer">
                 <p>Alpha testing • Answers may not always be accurate</p>
