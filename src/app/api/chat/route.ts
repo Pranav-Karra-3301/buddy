@@ -1,12 +1,13 @@
 import { NextRequest } from "next/server";
 import { OpenAIClient } from "@/lib/openai";
-import { AssistantStreamToSSE } from "@/lib/stream";
+import { AssistantStreamToSSE, ResponsesStreamToSSE } from "@/lib/stream";
 import OpenAI from "openai";
 
 export const runtime = "edge";
 
 type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 
+// Switch to Responses API flow; Assistants fallback retained if VECTOR_STORE_ID is present and we ever want tool-runs.
 let assistantId: string | null = null;
 
 function currentSemester(now: Date) {
@@ -124,7 +125,7 @@ async function getAssistant(client: OpenAI, vectorStoreId: string) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { messages }: { messages: ChatMessage[]; useRag?: boolean } = body || {};
+    const { messages, useRag }: { messages: ChatMessage[]; useRag?: boolean } = body || {};
 
     if (!Array.isArray(messages) || messages.length === 0) {
       return new Response("Invalid payload", { status: 400 });
@@ -133,32 +134,31 @@ export async function POST(req: NextRequest) {
     const client = OpenAIClient();
     const vectorStoreId = process.env.VECTOR_STORE_ID;
 
-    if (!vectorStoreId) {
-      return new Response("Vector store not configured", { status: 500 });
-    }
+    // Build Responses API request (primary path). Attach tools conditionally.
+    const systemInstruction = buildInstructions();
+    const useVector = !!(useRag && vectorStoreId);
 
-    // Get or create assistant
-    const assistant = await getAssistant(client, vectorStoreId);
+    const tools: any[] = [];
+    if (useVector && vectorStoreId) tools.push({ type: "file_search" });
+    // Always allow web search; model decides when to use it per instructions
+    tools.push({ type: "web_search" });
 
-    // Create a new thread for this conversation
-    const thread = await client.beta.threads.create();
+    const input = [
+      { role: "system", content: systemInstruction },
+      ...messages.filter(m => m.role !== "system").map(m => ({ role: m.role, content: m.content }))
+    ];
 
-    // Add all messages to the thread (excluding system message since it's in assistant instructions)
-    const userMessages = messages.filter(m => m.role !== "system");
-    for (const message of userMessages) {
-      await client.beta.threads.messages.create(thread.id, {
-        role: message.role as "user" | "assistant",
-        content: message.content,
-      });
-    }
-
-    // Create a run with streaming
-    const stream = client.beta.threads.runs.stream(thread.id, {
-      assistant_id: assistant.id,
+    const stream = await (client as any).responses.stream({
+      model: "gpt-5-nano",
+      input,
+      tools,
+      stream: true,
+      ...(useVector && vectorStoreId
+        ? { tool_choice: "auto", tool_resources: { file_search: { vector_store_ids: [vectorStoreId] } } }
+        : {}),
     });
 
-    // Convert Assistant stream to SSE format
-    return AssistantStreamToSSE(stream);
+    return ResponsesStreamToSSE(stream);
   } catch (err) {
     console.error("/api/chat error", err);
     return new Response("Failed to stream response", { status: 500 });

@@ -1,6 +1,7 @@
 import { Stream } from 'openai/streaming';
 import { ChatCompletionChunk } from 'openai/resources';
 import { AssistantStream } from 'openai/lib/AssistantStream';
+import { ResponsesStream } from 'openai/lib/ResponsesStream';
 
 // Convert chat completions stream to SSE format
 export function OpenAIToSSE(stream: Stream<ChatCompletionChunk>): Response {
@@ -89,6 +90,56 @@ export function AssistantStreamToSSE(stream: AssistantStream): Response {
         controller.close();
       } catch (error) {
         console.error('Assistant streaming error:', error);
+        controller.error(error);
+      }
+    },
+  });
+
+  return new Response(readable, {
+    headers: {
+      'Content-Type': 'text/event-stream; charset=utf-8',
+      'Cache-Control': 'no-cache, no-transform',
+      'Connection': 'keep-alive',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    },
+  });
+}
+
+// Convert Responses API stream to SSE format expected by the client
+export function ResponsesStreamToSSE(stream: ResponsesStream): Response {
+  const readable = new ReadableStream({
+    async start(controller) {
+      try {
+        for await (const event of stream) {
+          if ((event as any).type === 'response.output_text.delta') {
+            const delta = (event as any).delta as string | undefined;
+            if (delta) {
+              const sseData = JSON.stringify({
+                type: 'response.output_text.delta',
+                delta,
+              });
+              const sseMessage = `data: ${sseData}\n\n`;
+              controller.enqueue(new TextEncoder().encode(sseMessage));
+            }
+          } else if ((event as any).type === 'response.completed') {
+            const doneMessage = 'data: [DONE]\n\n';
+            controller.enqueue(new TextEncoder().encode(doneMessage));
+            controller.close();
+            return;
+          } else if ((event as any).type === 'response.error') {
+            console.error('Responses stream error event:', event);
+            controller.error(new Error('Response stream error'));
+            return;
+          }
+        }
+
+        const doneMessage = 'data: [DONE]\n\n';
+        controller.enqueue(new TextEncoder().encode(doneMessage));
+        controller.close();
+      } catch (error) {
+        console.error('Responses streaming error:', error);
         controller.error(error);
       }
     },
