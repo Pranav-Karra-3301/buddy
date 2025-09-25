@@ -4,30 +4,99 @@ import { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import ThemeToggle from './ThemeToggle';
+import ClaudeComposer from './ClaudeComposer';
+import Image from 'next/image';
 
 type Message = { role: 'user' | 'assistant'; content: string };
+
+const SUGGESTED_PROMPTS = [
+  "What can you do?",
+  "What are the prerequisites for CMPSC 465?",
+  "When does Panera at the Kern building close?",
+  "What writing clubs are there on campus?",
+  "What courses do I need a C or better in for a CMPSC degree?",
+  "What courses do I take after CMPEN 331?",
+  "What days of the week is Choolah closed?",
+  "When is Thanksgiving break this semester?",
+  "When is finals week?",
+  "When do classes begin in spring?"
+];
 
 export default function ClaudeChat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [value, setValue] = useState('');
   const [streaming, setStreaming] = useState(false);
+  const [showJumpToLatest, setShowJumpToLatest] = useState(false);
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [currentPrompts, setCurrentPrompts] = useState<string[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const scrollToBottom = () => {
-    if (scrollRef.current) {
+  // Get 4 random prompts and cycle them
+  const getRandomPrompts = () => {
+    const shuffled = [...SUGGESTED_PROMPTS].sort(() => 0.5 - Math.random());
+    return shuffled.slice(0, 4);
+  };
+
+  useEffect(() => {
+    const updateTheme = () => {
+      const currentTheme = document.documentElement.getAttribute('data-theme') as 'light' | 'dark' ||
+        (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      setTheme(currentTheme);
+    };
+
+    updateTheme();
+    const observer = new MutationObserver(updateTheme);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme']
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
+  // Initialize prompts only on page load
+  useEffect(() => {
+    setCurrentPrompts(getRandomPrompts());
+  }, []);
+
+  const scrollToBottom = (force = false) => {
+    if (scrollRef.current && (shouldAutoScroll || force)) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      setShowJumpToLatest(false);
     }
   };
 
-  useEffect(scrollToBottom, [messages]);
+  const handleScroll = () => {
+    if (!scrollRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
+    const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
+
+    setShouldAutoScroll(isNearBottom);
+    setShowJumpToLatest(!isNearBottom && messages.length > 0);
+  };
+
+  useEffect(() => {
+    if (streaming || messages.length > 0) {
+      scrollToBottom();
+    }
+  }, [messages, streaming, shouldAutoScroll]);
 
   const startNewChat = () => {
     setMessages([]);
     setValue('');
+    setCurrentPrompts(getRandomPrompts()); // Refresh prompts on new chat
   };
 
-  const onSend = async () => {
-    const text = value.trim();
+  const sendPrompt = (prompt: string) => {
+    setValue(prompt);
+    // Simulate the send action by triggering onSend with the prompt
+    setTimeout(() => {
+      onSendWithText(prompt);
+    }, 100);
+  };
+
+  const onSendWithText = async (text: string) => {
     if (!text || streaming) return;
     setValue('');
 
@@ -36,6 +105,7 @@ export default function ClaudeChat() {
     setMessages((prev) => [...prev, userMsg, assistantMsg]);
     setStreaming(true);
 
+    // Rest of the send logic...
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
@@ -99,10 +169,30 @@ export default function ClaudeChat() {
     }
   };
 
+  const onSend = async () => {
+    const text = value.trim();
+    await onSendWithText(text);
+  };
+
+  const autoResize = (textarea: HTMLTextAreaElement) => {
+    textarea.style.height = 'auto';
+    textarea.style.height = Math.min(textarea.scrollHeight, window.innerHeight * 0.4) + 'px';
+  };
+
+  const onInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setValue(e.target.value);
+    autoResize(e.target);
+  };
+
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       onSend();
+      // Reset textarea height after send
+      setTimeout(() => {
+        const textarea = e.target as HTMLTextAreaElement;
+        textarea.style.height = 'auto';
+      }, 0);
     }
   };
 
@@ -110,64 +200,67 @@ export default function ClaudeChat() {
 
   return (
     <div className="claude-chat">
-      {/* Header */}
-      <header className="chat-header">
-        <div className="header-controls">
-          {hasMessages && (
-            <button
-              onClick={startNewChat}
-              className="header-button"
-              aria-label="Start new chat"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M12 5v14M5 12h14"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              New chat
-            </button>
-          )}
-        </div>
-        <div className="header-controls">
-          <ThemeToggle />
-        </div>
-      </header>
+      {/* Alpha Testing Banner */}
+      <div className="alpha-banner">
+        <span className="alpha-tag" title="This is an experimental version. Some features may not work perfectly. Report issues to hi@mlpsu.org">
+          Alpha Testing
+        </span>
+      </div>
+
+      {/* Floating corner controls */}
+      <button
+        onClick={startNewChat}
+        className="corner-btn corner-left"
+        aria-label="Start new chat"
+        title="New chat"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+          <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+      <ThemeToggle className="corner-btn corner-right" />
 
       {/* Welcome State - Centered Input */}
       {!hasMessages && (
         <div className="welcome-container">
           <div className="welcome-content">
             <div className="welcome-header">
-              <h1>Hi, I&apos;m Buddy. <span className="beta-tag">Alpha Testing</span></h1>
-              <p>How can I help you today?</p>
-              <div className="beta-disclaimer">
-                <p>Alpha testing • Answers may not always be accurate</p>
-                <p>Any issues? Email screenshots or responses to <a href="mailto:hi@mlpsu.org">hi@mlpsu.org</a></p>
+              <div className="buddy-greeting">
+                <Image
+                  src={`/hand/${theme}.png`}
+                  alt="Friendly hand gesture"
+                  width={48}
+                  height={48}
+                  className="hand-icon"
+                />
+                <h1>Hi, I&apos;m Buddy.</h1>
               </div>
+              <p>How can I help you today?</p>
             </div>
+
             <div className="input-container">
-              <textarea
-                className="claude-input"
-                placeholder="Ask about courses, majors, policies..."
+              <ClaudeComposer
                 value={value}
-                onChange={(e) => setValue(e.target.value)}
-                onKeyDown={onKeyDown}
+                onChange={setValue}
+                onSend={onSendWithText}
+                placeholder="Ask about courses, majors, policies..."
                 disabled={streaming}
-                rows={1}
+                autoFocus
               />
-              <button
-                className="send-button"
-                onClick={onSend}
-                disabled={streaming || !value.trim()}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <path d="M7 11L12 6L17 11M12 18V7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </button>
+            </div>
+
+            {/* Suggested Prompts */}
+            <div className="suggested-prompts">
+              {currentPrompts.map((prompt, index) => (
+                <button
+                  key={`${prompt}-${index}`}
+                  className="prompt-button"
+                  onClick={() => sendPrompt(prompt)}
+                  disabled={streaming}
+                >
+                  {prompt}
+                </button>
+              ))}
             </div>
           </div>
         </div>
@@ -177,7 +270,7 @@ export default function ClaudeChat() {
       {hasMessages && (
         <div className="conversation-container">
           {/* Messages Area */}
-          <div className="messages-area" ref={scrollRef}>
+          <div className="messages-area" ref={scrollRef} onScroll={handleScroll}>
             <div className="messages-content">
               {messages.map((message, index) => (
                 <div key={index} className={`message ${message.role}`}>
@@ -231,29 +324,33 @@ export default function ClaudeChat() {
                 </div>
               ))}
             </div>
+
+            {/* Jump to Latest Button */}
+            {showJumpToLatest && (
+              <button
+                className="jump-to-latest"
+                onClick={() => scrollToBottom(true)}
+                aria-label="Jump to latest message"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M7 13L12 18L17 13M7 6L12 11L17 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                Jump to latest
+              </button>
+            )}
           </div>
 
           {/* Bottom Input */}
           <div className="bottom-input-container">
             <div className="bottom-input-wrapper">
-              <textarea
-                className="claude-input bottom"
-                placeholder="Follow up..."
+              <ClaudeComposer
                 value={value}
-                onChange={(e) => setValue(e.target.value)}
-                onKeyDown={onKeyDown}
+                onChange={setValue}
+                onSend={onSendWithText}
+                placeholder="Follow up..."
                 disabled={streaming}
-                rows={1}
+                variant="bottom"
               />
-              <button
-                className="send-button"
-                onClick={onSend}
-                disabled={streaming || !value.trim()}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <path d="M7 11L12 6L17 11M12 18V7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </button>
             </div>
           </div>
         </div>
