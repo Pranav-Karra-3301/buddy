@@ -890,3 +890,44 @@ body {
   opacity: 0;
   transition: opacity 500ms ease;
 }
+
+/* Markdown link styling - make links blue and clickable */
+.markdown-p a,
+.assistant-content a {
+  color: #0285ff;
+  text-decoration: underline;
+  cursor: pointer;
+  transition: color 200ms ease;
+}
+
+.markdown-p a:hover,
+.assistant-content a:hover {
+  color: #0066cc;
+  text-decoration: underline;
+}
+
+/* Dark theme link colors */
+:root[data-theme="dark"] .markdown-p a,
+:root[data-theme="dark"] .assistant-content a {
+  color: #99cdfe;
+}
+
+:root[data-theme="dark"] .markdown-p a:hover,
+:root[data-theme="dark"] .assistant-content a:hover {
+  color: #b3d9ff;
+}
+
+/* Ensure markdown headings are properly styled */
+.markdown-h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 1.5rem 0 0.75rem 0;
+  color: var(--text);
+}
+
+.markdown-h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 1.25rem 0 0.5rem 0;
+  color: var(--text);
+}
