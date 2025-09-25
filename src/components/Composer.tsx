@@ -47,8 +47,8 @@ export default function Composer({
 
   return (
     <div className="flex items-end gap-2">
-      <button className="btn" title="Attach (coming soon)" aria-label="Attach" disabled>📎</button>
-      <button className="btn" title="Voice (coming soon)" aria-label="Voice" disabled>🎤</button>
+      <button className="icon-btn" title="Attach (coming soon)" aria-label="Attach" disabled>📎</button>
+      <button className="icon-btn" title="Voice (coming soon)" aria-label="Voice" disabled>🎤</button>
       <textarea
         ref={ref}
         className="input flex-1"
@@ -59,7 +59,7 @@ export default function Composer({
         rows={1}
         style={{ resize: 'none', maxHeight: '40vh', width: '100%' }}
       />
-      <button className="btn" onClick={submit} aria-label="Send" title="Send" disabled={disabled}>➤</button>
+      <button className="icon-btn icon-btn--send" onClick={submit} aria-label="Send" title="Send" disabled={disabled}>➤</button>
     </div>
   );
 }

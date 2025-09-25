@@ -37,8 +37,14 @@ export default function MessageItem({
               ol: ({children}) => <ol style={{marginLeft: '1rem', marginBottom: '0.5rem'}}>{children}</ol>,
               li: ({children}) => <li style={{marginBottom: '0.25rem'}}>{children}</li>,
 
-              // Style paragraphs
-              p: ({children}) => <p style={{marginBottom: '0.5rem'}}>{children}</p>,
+              // Style paragraphs; detect simple "Sources:" label and render a section title
+              p: ({children}) => {
+                const text = String(children);
+                if (text.trim().toLowerCase() === 'sources:' || text.trim().toLowerCase() === 'sources') {
+                  return <h4 style={{fontWeight: 'bold', marginTop: '0.75rem', marginBottom: '0.25rem'}}>Sources</h4>;
+                }
+                return <p style={{marginBottom: '0.5rem'}}>{children}</p>;
+              },
 
               // Style code
               code: ({children, className}) => {
@@ -82,24 +88,28 @@ export default function MessageItem({
           </div>
         )}
       </div>
-      {isAssistant && (
-        <div className="toolbar text-xs opacity-80">
-          <button className="btn" onClick={copy} aria-label="Copy message">Copy</button>
-          <button className="btn" onClick={() => onRegenerate(message.id)} aria-label="Regenerate">Regenerate</button>
-          <button
-            className="btn"
-            aria-pressed={message.feedback === 'up'}
-            onClick={() => onFeedback(message.id, 'up')}
-            aria-label="Thumbs up"
-          >👍</button>
-          <button
-            className="btn"
-            aria-pressed={message.feedback === 'down'}
-            onClick={() => onFeedback(message.id, 'down')}
-            aria-label="Thumbs down"
-          >👎</button>
-        </div>
-      )}
+      <div className="toolbar text-xs opacity-80">
+        <button className="icon-btn" onClick={copy} aria-label="Copy message" title="Copy">📋</button>
+        {isAssistant && (
+          <>
+            <button className="icon-btn" onClick={() => onRegenerate(message.id)} aria-label="Regenerate" title="Regenerate">⟳</button>
+            <button
+              className="icon-btn"
+              aria-pressed={message.feedback === 'up'}
+              onClick={() => onFeedback(message.id, 'up')}
+              aria-label="Thumbs up"
+              title="Thumbs up"
+            >👍</button>
+            <button
+              className="icon-btn"
+              aria-pressed={message.feedback === 'down'}
+              onClick={() => onFeedback(message.id, 'down')}
+              aria-label="Thumbs down"
+              title="Thumbs down"
+            >👎</button>
+          </>
+        )}
+      </div>
     </div>
   );
 }

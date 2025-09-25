@@ -20,11 +20,23 @@ export default function MessageList({
   const ref = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
   const [atBottom, setAtBottom] = useState(true);
+  const [showFinding, setShowFinding] = useState(false);
 
   useEffect(() => {
     if (!ref.current || !autoScroll) return;
     ref.current.scrollTop = ref.current.scrollHeight;
   }, [thread, streaming, autoScroll]);
+
+  useEffect(() => {
+    let timer: number | undefined;
+    if (streaming) {
+      setShowFinding(false);
+      timer = window.setTimeout(() => setShowFinding(true), 1200);
+    } else {
+      setShowFinding(false);
+    }
+    return () => { if (timer) window.clearTimeout(timer); };
+  }, [streaming]);
 
   const onScroll = () => {
     const el = ref.current;
@@ -51,12 +63,16 @@ export default function MessageList({
         ))}
         {streaming && (
           <div className="bubble assistant" style={{ marginBottom: 20, width: 'fit-content' }}>
+            <div style={{ marginBottom: 6 }}><em>Sure — let me check that for you…</em></div>
+            {showFinding && (
+              <div style={{ marginBottom: 6, opacity: 0.85 }}><em>Finding that information for you…</em></div>
+            )}
             {typingNode}
           </div>
         )}
       </div>
       {!atBottom && (
-        <button className="jump-pill" onClick={jumpToLatest} aria-label="Jump to latest">
+        <button className="jump-to-latest" onClick={jumpToLatest} aria-label="Jump to latest">
           Jump to latest
         </button>
       )}

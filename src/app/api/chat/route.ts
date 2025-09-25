@@ -1,14 +1,12 @@
 import { NextRequest } from "next/server";
 import { OpenAIClient } from "@/lib/openai";
-import { AssistantStreamToSSE, ResponsesStreamToSSE } from "@/lib/stream";
-import OpenAI from "openai";
+import { ResponsesStreamToSSE } from "@/lib/stream";
 
 export const runtime = "edge";
 
 type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 
-// Switch to Responses API flow; Assistants fallback retained if VECTOR_STORE_ID is present and we ever want tool-runs.
-let assistantId: string | null = null;
+// Responses API only. No Assistants-managed threads.
 
 function currentSemester(now: Date) {
   const month = new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" })).getMonth() + 1;
@@ -53,9 +51,12 @@ Hours & “Open Now” checks
 - If hours are available in retrieved knowledge, compare to the current ET time. If not available, say you don’t have exact hours and suggest the official dining/office page to confirm.
 
 Style
-- Brief greeting: “Hi, I’m Buddy.” the first time you talk to the user.
-- Friendly, concise, and structured. Use bullets for steps/options. Keep answers short but complete.
-- Ask one or two clarifying question when needed (e.g., undergrad vs grad; which campus; dietary preference) or any kind of confirmation to ensure you get the right information.
+- Friendly, natural, and conversational. Avoid robotic phrasing.
+- Brief greeting on the first message only.
+- Be concise but complete. Use bullets for steps/options.
+- Bold key information such as times, dates, and final numbers.
+- If you need to look something up, you may start with a short preamble like “Sure — let me check that for you…” before the answer.
+- Ask one or two clarifying questions when needed (e.g., undergrad vs grad; campus; dietary preference).
 
 Retrieval Order (if applicable)
 - Undergraduate topics → search undergraduate.pdf first.
@@ -73,54 +74,16 @@ Uncertainty & Limits
 
 
 Response Skeleton
-- Direct answer (numbers/names first)
+- Direct answer (bold the key numbers/times/dates)
 - Context or options (bullets)
 - Next steps
-- Sources (short breadcrumbs)
+- ### Sources
+  - Descriptive source name (domain)
+  - Keep sources short and human-readable. Do not include raw URLs.
 - Optional clarifier (only if needed)`;
 }
 
-// Create or get the assistant with file_search capability
-async function getAssistant(client: OpenAI, vectorStoreId: string) {
-  if (assistantId) {
-    try {
-      // Try to retrieve existing assistant
-      const assistant = await client.beta.assistants.retrieve(assistantId);
-      // Always refresh instructions so date/semester stay current
-      const updated = await client.beta.assistants.update(assistant.id, {
-        name: "Buddy - ML@PSU Student Assistant",
-        instructions: buildInstructions(),
-        tools: ([
-          { type: "file_search" },
-          { type: "web_search" },
-        ] as any),
-        tool_resources: { file_search: { vector_store_ids: [vectorStoreId] } },
-        model: "gpt-4o-mini",
-        temperature: 0.2,
-      });
-      return updated;
-    } catch {
-      // Assistant doesn't exist, create a new one
-      assistantId = null;
-    }
-  }
-
-  // Create new assistant
-  const assistant = await client.beta.assistants.create({
-    name: "Buddy - ML@PSU Student Assistant",
-    instructions: buildInstructions(),
-    tools: ([
-      { type: "file_search" },
-      { type: "web_search" },
-    ] as any),
-    tool_resources: { file_search: { vector_store_ids: [vectorStoreId] } },
-    model: "gpt-4o-mini",
-    temperature: 0.2,
-  });
-
-  assistantId = assistant.id;
-  return assistant;
-}
+// (no Assistants helpers needed here)
 
 export async function POST(req: NextRequest) {
   try {
@@ -139,7 +102,7 @@ export async function POST(req: NextRequest) {
     const useVector = !!(useRag && vectorStoreId);
 
     const tools: any[] = [];
-    if (useVector && vectorStoreId) tools.push({ type: "file_search" });
+    if (useVector && vectorStoreId) tools.push({ type: "file_search", vector_store_ids: [vectorStoreId] });
     // Allow web search; model decides if/when to use it per instructions
     tools.push({ type: "web_search" });
 
@@ -153,9 +116,6 @@ export async function POST(req: NextRequest) {
       input,
       tools,
       stream: true,
-      ...(useVector && vectorStoreId
-        ? { attachments: [{ vector_store_id: vectorStoreId, tools: [{ type: "file_search" }] }] }
-        : {}),
     });
 
     return ResponsesStreamToSSE(stream);
