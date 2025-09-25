@@ -142,10 +142,10 @@ export default function ClaudeChat() {
         <div className="welcome-container">
           <div className="welcome-content">
             <div className="welcome-header">
-              <h1>Hi, I'm Buddy. <span className="beta-tag">Still In Development</span></h1>
+              <h1>Hi, I'm Buddy. <span className="beta-tag">Alpha Testing</span></h1>
               <p>How can I help you today?</p>
               <div className="beta-disclaimer">
-                <p>Beta preview • Answers may not always be accurate</p>
+                <p>Alpha testing • Answers may not always be accurate</p>
                 <p>Any issues? Email screenshots or responses to <a href="mailto:hi@mlpsu.org">hi@mlpsu.org</a></p>
               </div>
             </div>
