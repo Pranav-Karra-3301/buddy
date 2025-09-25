@@ -113,13 +113,22 @@ export function AssistantStreamToSSE(stream: AsyncIterable<unknown>): Response {
 export function ResponsesStreamToSSE(stream: AsyncIterable<unknown>): Response {
   const readable = new ReadableStream({
     async start(controller) {
+      let toolStatusTimeout: NodeJS.Timeout | null = null;
+
       try {
         for await (const event of stream) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          if ((event as any).type === 'response.output_text.delta') {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const delta = (event as any).delta as string | undefined;
+          const eventData = event as any;
+
+          // Log events in development to understand the structure
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Stream event:', eventData.type, eventData);
+          }
+
+          if (eventData.type === 'response.output_text.delta') {
+            const delta = eventData.delta as string | undefined;
             if (delta) {
+
               const sseData = JSON.stringify({
                 type: 'response.output_text.delta',
                 delta,
@@ -127,24 +136,107 @@ export function ResponsesStreamToSSE(stream: AsyncIterable<unknown>): Response {
               const sseMessage = `data: ${sseData}\n\n`;
               controller.enqueue(new TextEncoder().encode(sseMessage));
             }
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          } else if ((event as any).type === 'response.completed') {
+          } else if (eventData.type === 'response.web_search_call.in_progress') {
+            // Web search started
+            const sseData = JSON.stringify({
+              type: 'tool.status',
+              status: '🌐 Searching the web...',
+              isProcessing: true,
+            });
+            const sseMessage = `data: ${sseData}\n\n`;
+            controller.enqueue(new TextEncoder().encode(sseMessage));
+          } else if (eventData.type === 'response.web_search_call.searching') {
+            // Web search actively searching
+            const sseData = JSON.stringify({
+              type: 'tool.status',
+              status: '🔍 Searching for information...',
+              isProcessing: true,
+            });
+            const sseMessage = `data: ${sseData}\n\n`;
+            controller.enqueue(new TextEncoder().encode(sseMessage));
+          } else if (eventData.type === 'response.web_search_call.completed') {
+            // Web search completed - show processing status briefly
+            const sseData = JSON.stringify({
+              type: 'tool.status',
+              status: '💭 Processing results...',
+              isProcessing: true,
+            });
+            const sseMessage = `data: ${sseData}\n\n`;
+            controller.enqueue(new TextEncoder().encode(sseMessage));
+
+            // Clear status after processing
+            toolStatusTimeout = setTimeout(() => {
+              const completeData = JSON.stringify({
+                type: 'tool.complete',
+                isProcessing: false,
+              });
+              const completeMessage = `data: ${completeData}\n\n`;
+              controller.enqueue(new TextEncoder().encode(completeMessage));
+            }, 1500);
+          } else if (eventData.type.includes('file_search') && eventData.type.includes('in_progress')) {
+            // File search started
+            const sseData = JSON.stringify({
+              type: 'tool.status',
+              status: '📚 Searching documents...',
+              isProcessing: true,
+            });
+            const sseMessage = `data: ${sseData}\n\n`;
+            controller.enqueue(new TextEncoder().encode(sseMessage));
+          } else if (eventData.type.includes('file_search') && eventData.type.includes('completed')) {
+            // File search completed
+            const sseData = JSON.stringify({
+              type: 'tool.status',
+              status: '📖 Reading documents...',
+              isProcessing: true,
+            });
+            const sseMessage = `data: ${sseData}\n\n`;
+            controller.enqueue(new TextEncoder().encode(sseMessage));
+
+            // Clear status after processing
+            toolStatusTimeout = setTimeout(() => {
+              const completeData = JSON.stringify({
+                type: 'tool.complete',
+                isProcessing: false,
+              });
+              const completeMessage = `data: ${completeData}\n\n`;
+              controller.enqueue(new TextEncoder().encode(completeMessage));
+            }, 1500);
+          } else if (eventData.type === 'response.completed') {
+            // Clear any pending timeouts
+            if (toolStatusTimeout) {
+              clearTimeout(toolStatusTimeout);
+            }
+
             const doneMessage = 'data: [DONE]\n\n';
             controller.enqueue(new TextEncoder().encode(doneMessage));
             controller.close();
             return;
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          } else if ((event as any).type === 'response.error') {
+          } else if (eventData.type === 'response.error') {
+            // Clear any pending timeouts
+            if (toolStatusTimeout) {
+              clearTimeout(toolStatusTimeout);
+            }
+
             console.error('Responses stream error event:', event);
             controller.error(new Error('Response stream error'));
             return;
           }
         }
 
+        // Clear any pending timeouts
+        if (toolStatusTimeout) {
+          clearTimeout(toolStatusTimeout);
+        }
+
         const doneMessage = 'data: [DONE]\n\n';
         controller.enqueue(new TextEncoder().encode(doneMessage));
         controller.close();
       } catch (error) {
+        // Clear any pending timeouts
+        if (toolStatusTimeout) {
+          clearTimeout(toolStatusTimeout);
+        }
+
         console.error('Responses streaming error:', error);
         controller.error(error);
       }

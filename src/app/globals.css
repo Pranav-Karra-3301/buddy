@@ -864,3 +864,29 @@ body {
     font-size: 0.8rem;
   }
 }
+
+/* Tool Status Indicators */
+.tool-status {
+  margin-top: 8px;
+  margin-bottom: 4px;
+  opacity: 0.6;
+  transition: opacity 300ms ease;
+}
+
+.tool-status-text {
+  color: var(--text);
+  font-style: italic;
+  font-size: 14px;
+  animation: pulse-gentle 2s ease-in-out infinite;
+}
+
+@keyframes pulse-gentle {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 0.3; }
+}
+
+/* Fade out animation for completed tool status */
+.tool-status.fade-out {
+  opacity: 0;
+  transition: opacity 500ms ease;
+}

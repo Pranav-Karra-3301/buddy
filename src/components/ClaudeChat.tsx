@@ -8,7 +8,12 @@ import ClaudeComposer from './ClaudeComposer';
 import Image from 'next/image';
 import Skeleton from './Skeleton';
 
-type Message = { role: 'user' | 'assistant'; content: string };
+type Message = {
+  role: 'user' | 'assistant';
+  content: string;
+  toolStatus?: string; // Current tool status text
+  isProcessingTools?: boolean; // Whether tools are currently running
+};
 
 const SUGGESTED_PROMPTS = [
   "What can you do?",
@@ -102,7 +107,7 @@ export default function ClaudeChat() {
     setValue('');
 
     const userMsg: Message = { role: 'user', content: text };
-    const assistantMsg: Message = { role: 'assistant', content: '' };
+    const assistantMsg: Message = { role: 'assistant', content: '', isProcessingTools: false };
     setMessages((prev) => [...prev, userMsg, assistantMsg]);
     setStreaming(true);
 
@@ -140,6 +145,34 @@ export default function ClaudeChat() {
                 copy[copy.length - 1] = { ...last, content: buffer };
                 return copy;
               });
+            } else if (evt.type === 'tool.status') {
+              // Update tool status for the current assistant message
+              setMessages((prev) => {
+                const copy = [...prev];
+                const last = copy[copy.length - 1];
+                if (!last || last.role !== 'assistant') return prev;
+                copy[copy.length - 1] = {
+                  ...last,
+                  toolStatus: evt.status,
+                  isProcessingTools: evt.isProcessing
+                };
+                return copy;
+              });
+            } else if (evt.type === 'tool.complete') {
+              // Clear tool status with a slight delay for better UX
+              setTimeout(() => {
+                setMessages((prev) => {
+                  const copy = [...prev];
+                  const last = copy[copy.length - 1];
+                  if (!last || last.role !== 'assistant') return prev;
+                  copy[copy.length - 1] = {
+                    ...last,
+                    toolStatus: undefined,
+                    isProcessingTools: false
+                  };
+                  return copy;
+                });
+              }, 800); // Short delay before clearing status
             }
           } catch {
             // ignore malformed events
@@ -289,17 +322,34 @@ export default function ClaudeChat() {
                         </ReactMarkdown>
                       ) : (
                         streaming && index === messages.length - 1 ? (
-                          <>
+                          message.isProcessingTools ? (
+                            // Show just typing indicator when tools are running
                             <div className="typing-indicator">
                               <span></span>
                               <span></span>
                               <span></span>
                             </div>
-                            <div style={{ marginTop: 8 }}>
-                              <Skeleton lines={3} />
-                            </div>
-                          </>
+                          ) : (
+                            // Show full skeleton when no tools are running
+                            <>
+                              <div className="typing-indicator">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                              </div>
+                              <div style={{ marginTop: 8 }}>
+                                <Skeleton lines={3} />
+                              </div>
+                            </>
+                          )
                         ) : null
+                      )}
+
+                      {/* Tool Status Display */}
+                      {message.toolStatus && message.isProcessingTools && (
+                        <div className="tool-status">
+                          <span className="tool-status-text">{message.toolStatus}</span>
+                        </div>
                       )}
                     </div>
                   )}
