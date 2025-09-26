@@ -10,6 +10,11 @@
     "seed:vector": "tsx scripts/seed-vector-store.ts"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^2.0.38",
+    "@ai-sdk/react": "^2.0.56",
+    "ai": "^5.0.56",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.544.0",
     "next": "15.5.4",
     "openai": "^4.58.1",
     "react": "19.1.0",

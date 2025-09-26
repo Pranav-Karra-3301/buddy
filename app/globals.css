@@ -1,0 +1,168 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-pt-serif: 'PT Serif', serif;
+}
+
+:root[data-theme="light"] {
+  --background: #FAF9F5;
+  --foreground: #000000;
+  --card: #FFFFFF;
+  --card-foreground: #000000;
+  --popover: #FFFFFF;
+  --popover-foreground: #000000;
+  --primary: #000000;
+  --primary-foreground: #FFFFFF;
+  --secondary: #F0EEE6;
+  --secondary-foreground: #000000;
+  --muted: #F5F4ED;
+  --muted-foreground: #666666;
+  --accent: #0285FF;
+  --accent-foreground: #FFFFFF;
+  --destructive: #FF3B30;
+  --destructive-foreground: #FFFFFF;
+  --border: #E5E5E7;
+  --input: #F0EEE6;
+  --ring: #0285FF;
+  --chat-surface: #FFFFFF;
+  --darker-shade: #F5F4ED;
+  --selection: #F0EEE6;
+}
+
+:root[data-theme="dark"] {
+  --background: #212121;
+  --foreground: #FFFFFF;
+  --card: #303030;
+  --card-foreground: #FFFFFF;
+  --popover: #303030;
+  --popover-foreground: #FFFFFF;
+  --primary: #FFFFFF;
+  --primary-foreground: #000000;
+  --secondary: #303030;
+  --secondary-foreground: #FFFFFF;
+  --muted: #181818;
+  --muted-foreground: #999999;
+  --accent: #99CDFE;
+  --accent-foreground: #000000;
+  --destructive: #FF453A;
+  --destructive-foreground: #FFFFFF;
+  --border: #404040;
+  --input: #303030;
+  --ring: #99CDFE;
+  --chat-surface: #303030;
+  --darker-shade: #181818;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  font-family: var(--font-pt-serif);
+  background-color: var(--background);
+  color: var(--foreground);
+  min-height: 100vh;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.scrollbar-thin {
+  scrollbar-width: thin;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: var(--muted-foreground);
+  border-radius: 3px;
+  opacity: 0.5;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  opacity: 0.7;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --background: #212121;
+    --foreground: #FFFFFF;
+    --card: #303030;
+    --card-foreground: #FFFFFF;
+    --popover: #303030;
+    --popover-foreground: #FFFFFF;
+    --primary: #FFFFFF;
+    --primary-foreground: #000000;
+    --secondary: #303030;
+    --secondary-foreground: #FFFFFF;
+    --muted: #181818;
+    --muted-foreground: #999999;
+    --accent: #99CDFE;
+    --accent-foreground: #000000;
+    --destructive: #FF453A;
+    --destructive-foreground: #FFFFFF;
+    --border: #404040;
+    --input: #303030;
+    --ring: #99CDFE;
+    --chat-surface: #303030;
+    --darker-shade: #181818;
+  }
+}
+
+@keyframes typing-dot {
+  0%, 60%, 100% {
+    transform: translateY(0);
+    opacity: 0.5;
+  }
+  30% {
+    transform: translateY(-10px);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in-bottom {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.animate-slide-in {
+  animation: slide-in-bottom 220ms ease-out;
+}
+
+.animate-pulse-subtle {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
